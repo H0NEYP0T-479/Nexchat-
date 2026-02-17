@@ -14,6 +14,7 @@ def hash_password(password: str) -> str:
     key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
     return salt.hex() + ':' + key.hex()
 
+
 def verify_password(plain: str, hashed: str) -> bool:
     try:
         salt_hex, key_hex = hashed.split(':')
