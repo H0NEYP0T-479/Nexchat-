@@ -1,20 +1,27 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from datetime import datetime, timedelta
 from jose import jwt
-from passlib.context import CryptContext
 from database import users_collection
 from models.user import UserRegister, UserLogin, TokenResponse
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from bson import ObjectId
+import hashlib
+import os
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = os.urandom(32)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return salt.hex() + ':' + key.hex()
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    try:
+        salt_hex, key_hex = hashed.split(':')
+        salt = bytes.fromhex(salt_hex)
+        key = hashlib.pbkdf2_hmac('sha256', plain.encode('utf-8'), salt, 100000)
+        return key.hex() == key_hex
+    except Exception:
+        return False
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
@@ -24,17 +31,14 @@ def create_access_token(data: dict) -> str:
 
 @router.post("/register", response_model=TokenResponse)
 async def register(user: UserRegister):
-    # Check if email already exists
     existing = await users_collection.find_one({"email": user.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Check if username already exists
     existing_username = await users_collection.find_one({"username": user.username})
     if existing_username:
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    # Create new user
     new_user = {
         "username": user.username,
         "email": user.email,
