@@ -4,6 +4,7 @@ import { getMessages, getRooms } from '../services/api'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import Sidebar from './Sidebar'
+import styles from './Chat.module.css'
 
 interface Message {
   id: string
@@ -73,7 +74,7 @@ const Chat = () => {
   const activeRoomData = rooms.find(r => r.id === activeRoom)
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#1a1a2e' }}>
+    <div className={styles.chatContainer}>
       <Sidebar
         rooms={rooms}
         activeRoom={activeRoom}
@@ -81,32 +82,19 @@ const Chat = () => {
       />
 
       {/* Main chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className={styles.mainChatArea}>
         {/* Chat header */}
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          background: '#16213e',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <div style={{ fontWeight: '700', fontSize: '16px' }}>
+        <div className={styles.chatHeader}>
+          <div className={styles.roomInfo}>
+            <div className={styles.roomName}>
               # {activeRoomData?.name || activeRoom}
             </div>
-            <div style={{ fontSize: '12px', color: '#4a5568' }}>
+            <div className={styles.roomDescription}>
               {activeRoomData?.description}
             </div>
           </div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            fontSize: '12px', color: connected ? '#48bb78' : '#e94560'
-          }}>
-            <div style={{
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: connected ? '#48bb78' : '#e94560'
-            }} />
+          <div className={`${styles.connectionStatus} ${connected ? styles.connected : styles.disconnected}`}>
+            <div className={`${styles.statusDot} ${connected ? styles.connected : styles.disconnected}`} />
             {connected ? 'Connected' : 'Disconnected'}
           </div>
         </div>
