@@ -3,8 +3,9 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Chat from './components/Chat'
+import type { ReactElement } from 'react'
 
-const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+const PrivateRoute = ({ children }: { children: ReactElement }) => {
   const { user } = useAuth()
   return user ? children : <Navigate to="/login" />
 }
