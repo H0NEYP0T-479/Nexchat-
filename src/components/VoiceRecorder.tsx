@@ -1,66 +1,52 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 
 interface VoiceRecorderProps {
-  onRecordingComplete: (audioBlob: Blob) => void
-  onRecordingCancel?: () => void
+  onTranscript: (text: string) => void
+  disabled?: boolean
 }
 
-const VoiceRecorder = ({ onRecordingComplete, onRecordingCancel }: VoiceRecorderProps) => {
+const VoiceRecorder = ({ onTranscript, disabled }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false)
-  const [recordingTime, setRecordingTime] = useState(0)
+  const [isProcessing, setIsProcessing] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const timerRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop()
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
-    }
-  }, [isRecording])
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data)
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data)
         }
       }
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        onRecordingComplete(audioBlob)
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop())
-          streamRef.current = null
+        stream.getTracks().forEach(track => track.stop())
+        
+        // Send to backend for transcription
+        setIsProcessing(true)
+        try {
+          const { transcribeVoice } = await import('../services/aiService')
+          const { useAuth } = await import('../context/AuthContext')
+          const result = await transcribeVoice(audioBlob, 'user_id_here') // Pass actual user ID
+          onTranscript(result.text)
+        } catch (err) {
+          console.error('Transcription failed:', err)
+        } finally {
+          setIsProcessing(false)
         }
-        setRecordingTime(0)
       }
 
       mediaRecorder.start()
       setIsRecording(true)
-
-      // Start timer
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime(prev => prev + 1)
-      }, 1000)
-    } catch (error) {
-      console.error('Error accessing microphone:', error)
-      alert('Unable to access microphone. Please grant permission.')
+    } catch (err) {
+      console.error('Failed to start recording:', err)
+      alert('Microphone access denied')
     }
   }
 
@@ -68,116 +54,68 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingCancel }: VoiceRecorder
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
     }
-  }
-
-  const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      // Don't trigger onstop callback by clearing chunks first
-      chunksRef.current = []
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-      setRecordingTime(0)
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-        streamRef.current = null
-      }
-      onRecordingCancel?.()
-    }
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      padding: '10px',
-      backgroundColor: '#f5f5f5',
-      borderRadius: '8px'
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       {!isRecording ? (
         <button
           onClick={startRecording}
+          disabled={disabled || isProcessing}
           style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
             border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          🎤 Start Recording
-        </button>
-      ) : (
-        <>
-          <div style={{
+            background: disabled ? '#4a5568' : 'linear-gradient(135deg, #e94560, #c62a47)',
+            color: 'white',
+            fontSize: '18px',
+            cursor: disabled ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px'
-          }}>
-            <div style={{
-              width: '10px',
-              height: '10px',
-              backgroundColor: 'red',
-              borderRadius: '50%',
-              animation: 'pulse 1.5s infinite'
-            }} />
-            <span style={{ fontWeight: 'bold' }}>{formatTime(recordingTime)}</span>
-          </div>
-          <button
-            onClick={stopRecording}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            ⏹ Stop
-          </button>
-          <button
-            onClick={cancelRecording}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            ✕ Cancel
-          </button>
-        </>
+            justifyContent: 'center'
+          }}
+        >
+          {isProcessing ? '⏳' : '🎤'}
+        </button>
+      ) : (
+        <button
+          onClick={stopRecording}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            border: 'none',
+            background: '#e94560',
+            color: 'white',
+            fontSize: '18px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'pulse 1.5s infinite'
+          }}
+        >
+          ⏹️
+        </button>
       )}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-          }
-        `}
-      </style>
+      {isRecording && (
+        <span style={{ color: '#e94560', fontSize: '12px', animation: 'pulse 1.5s infinite' }}>
+          Recording...
+        </span>
+      )}
+      {isProcessing && (
+        <span style={{ color: '#8892b0', fontSize: '12px' }}>
+          Processing...
+        </span>
+      )}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   )
 }

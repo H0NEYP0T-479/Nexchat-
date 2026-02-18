@@ -3,9 +3,10 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Chat from './components/Chat'
-import type { ReactElement } from 'react'
+import Contacts from './pages/Contacts'
+import AIAssistant from './components/AIAssistant'
 
-const PrivateRoute = ({ children }: { children: ReactElement }) => {
+const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { user } = useAuth()
   return user ? children : <Navigate to="/login" />
 }
@@ -20,6 +21,16 @@ function App() {
           <Route path="/chat" element={
             <PrivateRoute>
               <Chat />
+            </PrivateRoute>
+          } />
+          <Route path="/contacts" element={
+            <PrivateRoute>
+              <Contacts />
+            </PrivateRoute>
+          } />
+          <Route path="/ai" element={
+            <PrivateRoute>
+              <AIAssistant />
             </PrivateRoute>
           } />
           <Route path="*" element={<Navigate to="/login" />} />

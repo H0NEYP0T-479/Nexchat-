@@ -9,7 +9,6 @@ private_messages_collection = db["private_messages"]
 
 @router.post("/send")
 async def send_private_message(message: PrivateMessage):
-    """Send a private message"""
     new_message = {
         "sender_id": message.sender_id,
         "receiver_id": message.receiver_id,
@@ -35,7 +34,6 @@ async def send_private_message(message: PrivateMessage):
 
 @router.get("/messages/{user_id}/{contact_id}")
 async def get_private_messages(user_id: str, contact_id: str, limit: int = 50):
-    """Get messages between two users"""
     messages = []
     
     cursor = private_messages_collection.find({
@@ -61,7 +59,6 @@ async def get_private_messages(user_id: str, contact_id: str, limit: int = 50):
 
 @router.put("/messages/{message_id}/status")
 async def update_message_status(message_id: str, status: str):
-    """Update message status (delivered/read)"""
     result = await private_messages_collection.update_one(
         {"_id": ObjectId(message_id)},
         {"$set": {"status": status}}
@@ -74,7 +71,6 @@ async def update_message_status(message_id: str, status: str):
 
 @router.get("/conversations/{user_id}")
 async def get_conversations(user_id: str):
-    """Get all conversations for a user with last message"""
     pipeline = [
         {
             "$match": {

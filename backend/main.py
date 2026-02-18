@@ -1,13 +1,21 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, chat
+from fastapi.staticfiles import StaticFiles
+from routes import auth, chat, contacts, private_chat, ai, media
 from websocket_manager import manager
 from database import messages_collection
 from datetime import datetime
 import json
+import os
 
 app = FastAPI(title="Nexchat API")
+
+# Create uploads directory
+os.makedirs("uploads", exist_ok=True)
+
+# Mount uploads directory
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 origins = [
     "http://localhost:5173",
@@ -24,7 +32,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Handle OPTIONS preflight manually
 @app.options("/{rest_of_path:path}")
 async def preflight_handler(request: Request, rest_of_path: str):
     return JSONResponse(
@@ -36,12 +43,17 @@ async def preflight_handler(request: Request, rest_of_path: str):
         }
     )
 
+# Include all routers
 app.include_router(auth.router)
 app.include_router(chat.router)
+app.include_router(contacts.router)
+app.include_router(private_chat.router)
+app.include_router(ai.router)
+app.include_router(media.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Nexchat API is running"}
+    return {"message": "Nexchat API with AI Assistant is running"}
 
 @app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):

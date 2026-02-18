@@ -1,121 +1,285 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import ContactList from '../components/ContactList'
+import { searchUsers, addContact, getContacts, deleteContact } from '../services/contactService'
 import { useNavigate } from 'react-router-dom'
+
+interface User {
+  id: string
+  username: string
+  email: string
+}
 
 interface Contact {
   id: string
   contact_user_id: string
   contact_username: string
-  nickname?: string
+  contact_email: string
   is_online: boolean
 }
 
 const Contacts = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<User[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const handleContactSelect = (contact: Contact) => {
-    setSelectedContact(contact)
-    // Navigate to private chat with this contact
-    navigate(`/private-chat/${contact.contact_user_id}`)
+  useEffect(() => {
+    loadContacts()
+  }, [])
+
+  const loadContacts = async () => {
+    if (!user) return
+    try {
+      const data = await getContacts(user.user_id)
+      setContacts(data)
+    } catch (err) {
+      console.error('Failed to load contacts:', err)
+    }
   }
 
-  if (!user) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '18px',
-        color: '#888'
-      }}>
-        Please log in to view contacts
-      </div>
-    )
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return
+    setLoading(true)
+    try {
+      const results = await searchUsers(searchQuery)
+      setSearchResults(results)
+    } catch (err) {
+      console.error('Search failed:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddContact = async (contactUserId: string) => {
+    if (!user) return
+    try {
+      await addContact(user.user_id, contactUserId)
+      alert('Contact added!')
+      loadContacts()
+      setSearchResults([])
+      setSearchQuery('')
+    } catch (err: any) {
+      alert(err.message)
+    }
+  }
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm('Delete this contact?')) return
+    try {
+      await deleteContact(contactId)
+      loadContacts()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    }
+  }
+
+  const openChat = (contactId: string) => {
+    navigate(`/private-chat/${contactId}`)
   }
 
   return (
     <div style={{
-      display: 'flex',
       height: '100vh',
-      backgroundColor: '#f5f5f5'
+      background: '#1a1a2e',
+      display: 'flex',
+      flexDirection: 'column'
     }}>
-      {/* Sidebar with back button */}
+      {/* Header */}
       <div style={{
-        width: '80px',
-        backgroundColor: '#343a40',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '20px 10px'
+        padding: '16px 20px',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: '#16213e'
       }}>
+        <h2 style={{ margin: 0, fontSize: '18px' }}>Contacts</h2>
         <button
           onClick={() => navigate('/chat')}
           style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            backgroundColor: '#6c757d',
-            color: 'white',
+            marginTop: '8px',
+            padding: '6px 12px',
+            background: 'rgba(255,255,255,0.1)',
             border: 'none',
+            borderRadius: '6px',
+            color: '#fff',
             cursor: 'pointer',
-            fontSize: '20px',
-            marginBottom: '20px'
+            fontSize: '12px'
           }}
-          title="Back to Chat"
         >
-          ←
+          ← Back to Group Chat
         </button>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          borderRadius: '50%',
-          backgroundColor: '#007bff',
-          color: 'white',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          fontSize: '24px',
-          marginBottom: '20px'
-        }}>
-          👥
-        </div>
       </div>
 
-      {/* Main content */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '20px 30px',
-          backgroundColor: 'white',
-          borderBottom: '1px solid #e0e0e0'
-        }}>
-          <h1 style={{ margin: 0, fontSize: '28px', color: '#333' }}>
-            My Contacts
-          </h1>
-          <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>
-            Manage your contacts and friend requests
-          </p>
+      {/* Search */}
+      <div style={{ padding: '16px 20px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="Search users by name or email..."
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              color: '#fff',
+              fontSize: '14px',
+              outline: 'none'
+            }}
+          />
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            style={{
+              padding: '10px 16px',
+              background: 'linear-gradient(135deg, #e94560, #c62a47)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#fff',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            {loading ? '...' : 'Search'}
+          </button>
         </div>
 
-        {/* Contact List */}
-        <div style={{
-          flex: 1,
-          backgroundColor: 'white',
-          margin: '20px 30px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }}>
-          <ContactList onContactSelect={handleContactSelect} />
+        {/* Search Results */}
+        {searchResults.length > 0 && (
+          <div style={{
+            marginTop: '16px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '8px',
+            padding: '8px'
+          }}>
+            <div style={{ fontSize: '12px', color: '#8892b0', marginBottom: '8px', padding: '0 8px' }}>
+              Search Results
+            </div>
+            {searchResults.map(result => (
+              <div key={result.id} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.03)',
+                marginBottom: '4px'
+              }}>
+                <div>
+                  <div style={{ fontWeight: '600', fontSize: '14px' }}>{result.username}</div>
+                  <div style={{ fontSize: '12px', color: '#8892b0' }}>{result.email}</div>
+                </div>
+                <button
+                  onClick={() => handleAddContact(result.id)}
+                  style={{
+                    padding: '6px 12px',
+                    background: 'linear-gradient(135deg, #48bb78, #38a169)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Contacts List */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '0 20px 20px'
+      }}>
+        <div style={{ fontSize: '12px', color: '#8892b0', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Your Contacts ({contacts.length})
         </div>
+
+        {contacts.length === 0 && (
+          <div style={{ textAlign: 'center', color: '#4a5568', marginTop: '40px' }}>
+            No contacts yet. Search and add someone!
+          </div>
+        )}
+
+        {contacts.map(contact => (
+          <div key={contact.id} style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '8px',
+            marginBottom: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+          onClick={() => openChat(contact.contact_user_id)}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0f3460, #16213e)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '16px',
+                position: 'relative'
+              }}>
+                {contact.contact_username[0].toUpperCase()}
+                {contact.is_online && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: '12px',
+                    height: '12px',
+                    background: '#48bb78',
+                    border: '2px solid #16213e',
+                    borderRadius: '50%'
+                  }} />
+                )}
+              </div>
+              <div>
+                <div style={{ fontWeight: '600', fontSize: '14px' }}>{contact.contact_username}</div>
+                <div style={{ fontSize: '12px', color: '#8892b0' }}>{contact.contact_email}</div>
+              </div>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDeleteContact(contact.id)
+              }}
+              style={{
+                padding: '6px 12px',
+                background: 'rgba(233,69,96,0.15)',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#e94560',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600'
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   )

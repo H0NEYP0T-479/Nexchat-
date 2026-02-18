@@ -4,7 +4,7 @@ import { getMessages, getRooms } from '../services/api'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import Sidebar from './Sidebar'
-import styles from './Chat.module.css'
+import { useNavigate } from 'react-router-dom'
 
 interface Message {
   id: string
@@ -22,28 +22,24 @@ interface Room {
 
 const Chat = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState<Message[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [activeRoom, setActiveRoom] = useState('general')
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
 
-  // Load rooms on mount
   useEffect(() => {
     getRooms().then(setRooms).catch(console.error)
   }, [])
 
-  // Connect WebSocket and load messages when room changes
   useEffect(() => {
-    // Load old messages
     getMessages(activeRoom).then(setMessages).catch(console.error)
 
-    // Close previous WebSocket
     if (wsRef.current) {
       wsRef.current.close()
     }
 
-    // Open new WebSocket
     const ws = new WebSocket(`ws://localhost:8000/ws/${activeRoom}`)
     wsRef.current = ws
 
@@ -74,35 +70,79 @@ const Chat = () => {
   const activeRoomData = rooms.find(r => r.id === activeRoom)
 
   return (
-    <div className={styles.chatContainer}>
+    <div style={{ display: 'flex', height: '100vh', background: '#1a1a2e' }}>
       <Sidebar
         rooms={rooms}
         activeRoom={activeRoom}
         onRoomSelect={setActiveRoom}
       />
 
-      {/* Main chat area */}
-      <div className={styles.mainChatArea}>
-        {/* Chat header */}
-        <div className={styles.chatHeader}>
-          <div className={styles.roomInfo}>
-            <div className={styles.roomName}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          background: '#16213e',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '16px' }}>
               # {activeRoomData?.name || activeRoom}
             </div>
-            <div className={styles.roomDescription}>
+            <div style={{ fontSize: '12px', color: '#4a5568' }}>
               {activeRoomData?.description}
             </div>
           </div>
-          <div className={`${styles.connectionStatus} ${connected ? styles.connected : styles.disconnected}`}>
-            <div className={`${styles.statusDot} ${connected ? styles.connected : styles.disconnected}`} />
-            {connected ? 'Connected' : 'Disconnected'}
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => navigate('/ai')}
+              style={{
+                padding: '8px 12px',
+                background: 'linear-gradient(135deg, #7c3aed, #5b21b6)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}
+            >
+              🤖 AI Assistant
+            </button>
+
+            <button
+              onClick={() => navigate('/contacts')}
+              style={{
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}
+            >
+              👥 Contacts
+            </button>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '12px', color: connected ? '#48bb78' : '#e94560'
+            }}>
+              <div style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: connected ? '#48bb78' : '#e94560'
+              }} />
+              {connected ? 'Connected' : 'Disconnected'}
+            </div>
           </div>
         </div>
 
-        {/* Messages */}
         <MessageList messages={messages} />
 
-        {/* Input */}
         <MessageInput
           onSendMessage={handleSendMessage}
           disabled={!connected}
