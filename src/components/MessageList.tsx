@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import styles from './MessageList.module.css'
 
 interface Message {
   id: string
@@ -28,19 +29,9 @@ const MessageList = ({ messages }: MessageListProps) => {
   }
 
   return (
-    <div style={{
-      flex: 1,
-      overflowY: 'auto',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px'
-    }}>
+    <div className={styles.messageList}>
       {messages.length === 0 && (
-        <div style={{
-          textAlign: 'center', color: '#4a5568',
-          marginTop: '40px', fontSize: '14px'
-        }}>
+        <div className={styles.emptyState}>
           No messages yet. Say hello! 👋
         </div>
       )}
@@ -48,51 +39,25 @@ const MessageList = ({ messages }: MessageListProps) => {
       {messages.map(msg => {
         const isOwn = msg.sender_id === user?.user_id
         return (
-          <div key={msg.id} style={{
-            display: 'flex',
-            flexDirection: isOwn ? 'row-reverse' : 'row',
-            alignItems: 'flex-end',
-            gap: '8px'
-          }}>
+          <div key={msg.id} className={`${styles.messageWrapper} ${isOwn ? styles.own : ''}`}>
             {/* Avatar */}
             {!isOwn && (
-              <div style={{
-                width: '30px', height: '30px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #0f3460, #16213e)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: '700', flexShrink: 0,
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}>
+              <div className={styles.avatar}>
                 {msg.sender[0].toUpperCase()}
               </div>
             )}
 
             {/* Message bubble */}
-            <div style={{ maxWidth: '65%' }}>
+            <div className={styles.messageContent}>
               {!isOwn && (
-                <div style={{ fontSize: '11px', color: '#8892b0', marginBottom: '4px', paddingLeft: '4px' }}>
+                <div className={styles.senderName}>
                   {msg.sender}
                 </div>
               )}
-              <div style={{
-                padding: '10px 14px',
-                borderRadius: isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                background: isOwn
-                  ? 'linear-gradient(135deg, #e94560, #c62a47)'
-                  : 'rgba(255,255,255,0.07)',
-                border: isOwn ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                fontSize: '14px',
-                lineHeight: '1.5',
-                wordBreak: 'break-word'
-              }}>
+              <div className={`${styles.messageBubble} ${isOwn ? styles.own : styles.other}`}>
                 {msg.text}
               </div>
-              <div style={{
-                fontSize: '10px', color: '#4a5568',
-                marginTop: '4px',
-                textAlign: isOwn ? 'right' : 'left',
-                paddingLeft: '4px', paddingRight: '4px'
-              }}>
+              <div className={`${styles.timestamp} ${isOwn ? styles.own : styles.other}`}>
                 {formatTime(msg.timestamp)}
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import styles from './Sidebar.module.css'
 
 interface Room {
   id: string
@@ -23,47 +24,27 @@ const Sidebar = ({ rooms, activeRoom, onRoomSelect }: SidebarProps) => {
   }
 
   return (
-    <div style={{
-      width: '260px',
-      background: '#16213e',
-      borderRight: '1px solid rgba(255,255,255,0.08)',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh'
-    }}>
+    <div className={styles.sidebar}>
       {/* Header */}
-      <div style={{
-        padding: '20px',
-        borderBottom: '1px solid rgba(255,255,255,0.08)'
-      }}>
-        <div style={{ fontSize: '22px', fontWeight: '700', color: '#e94560' }}>
+      <div className={styles.header}>
+        <div className={styles.logo}>
           💬 Nexchat
         </div>
       </div>
 
       {/* Rooms */}
-      <div style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
-        <div style={{ color: '#4a5568', fontSize: '11px', fontWeight: '600',
-          padding: '0 12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <div className={styles.roomsList}>
+        <div className={styles.sectionLabel}>
           Channels
         </div>
         {rooms.map(room => (
           <div
             key={room.id}
             onClick={() => onRoomSelect(room.id)}
-            style={{
-              padding: '10px 12px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              marginBottom: '2px',
-              background: activeRoom === room.id ? 'rgba(233,69,96,0.15)' : 'transparent',
-              color: activeRoom === room.id ? '#e94560' : '#8892b0',
-              fontWeight: activeRoom === room.id ? '600' : '400',
-              transition: 'all 0.15s'
-            }}
+            className={`${styles.roomItem} ${activeRoom === room.id ? styles.active : ''}`}
           >
             # {room.name}
-            <div style={{ fontSize: '11px', color: '#4a5568', marginTop: '2px' }}>
+            <div className={styles.roomDescription}>
               {room.description}
             </div>
           </div>
@@ -71,35 +52,17 @@ const Sidebar = ({ rooms, activeRoom, onRoomSelect }: SidebarProps) => {
       </div>
 
       {/* User info + logout */}
-      <div style={{
-        padding: '16px',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #e94560, #c62a47)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: '700', fontSize: '14px'
-          }}>
+      <div className={styles.userInfo}>
+        <div className={styles.userProfile}>
+          <div className={styles.avatar}>
             {user?.username[0].toUpperCase()}
           </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: '600' }}>{user?.username}</div>
-            <div style={{ fontSize: '11px', color: '#4a5568' }}>Online</div>
+          <div className={styles.userDetails}>
+            <div className={styles.username}>{user?.username}</div>
+            <div className={styles.status}>Online</div>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            background: 'rgba(233,69,96,0.15)', border: 'none',
-            color: '#e94560', padding: '6px 10px', borderRadius: '6px',
-            cursor: 'pointer', fontSize: '12px', fontWeight: '600'
-          }}
-        >
+        <button onClick={handleLogout} className={styles.logoutBtn}>
           Logout
         </button>
       </div>
