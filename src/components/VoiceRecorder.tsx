@@ -9,6 +9,7 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingCancel }: VoiceRecorder
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<number | null>(null)
 
@@ -20,12 +21,16 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingCancel }: VoiceRecorder
       if (mediaRecorderRef.current && isRecording) {
         mediaRecorderRef.current.stop()
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
     }
   }, [isRecording])
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
@@ -39,7 +44,10 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingCancel }: VoiceRecorder
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' })
         onRecordingComplete(audioBlob)
-        stream.getTracks().forEach(track => track.stop())
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop())
+          streamRef.current = null
+        }
         setRecordingTime(0)
       }
 
@@ -69,13 +77,18 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingCancel }: VoiceRecorder
 
   const cancelRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      // Don't trigger onstop callback by clearing chunks first
+      chunksRef.current = []
       mediaRecorderRef.current.stop()
       setIsRecording(false)
-      chunksRef.current = []
       setRecordingTime(0)
       if (timerRef.current) {
         clearInterval(timerRef.current)
         timerRef.current = null
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current = null
       }
       onRecordingCancel?.()
     }

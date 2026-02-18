@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 import os
 from dotenv import load_dotenv
 
@@ -56,7 +56,7 @@ class OpenAIService:
         except Exception as e:
             return f"Error generating summary: {str(e)}"
     
-    async def analyze_sentiment(self, text: str) -> Dict[str, any]:
+    async def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         """
         Analyze sentiment of a message
         
