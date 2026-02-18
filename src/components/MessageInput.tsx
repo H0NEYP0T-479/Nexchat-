@@ -1,4 +1,5 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import styles from './MessageInput.module.css'
 
 interface MessageInputProps {
