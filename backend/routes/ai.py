@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime
+from bson import ObjectId
 from database import db
 from services.openai_service import openai_service
 from pydantic import BaseModel
@@ -38,7 +39,7 @@ async def chat_with_ai(request: AIMessageRequest):
         # Get or create conversation
         if request.conversation_id:
             conversation = await ai_conversations_collection.find_one(
-                {"_id": request.conversation_id, "user_id": request.user_id}
+                {"_id": ObjectId(request.conversation_id), "user_id": request.user_id}
             )
             if not conversation:
                 raise HTTPException(status_code=404, detail="Conversation not found")
@@ -90,7 +91,7 @@ async def chat_with_ai(request: AIMessageRequest):
         
         # Update conversation timestamp
         await ai_conversations_collection.update_one(
-            {"_id": request.conversation_id},
+            {"_id": ObjectId(request.conversation_id)},
             {"$set": {"updated_at": datetime.utcnow()}}
         )
         
@@ -166,7 +167,7 @@ async def delete_ai_conversation(conversation_id: str, user_id: str):
     try:
         # Verify ownership
         conversation = await ai_conversations_collection.find_one(
-            {"_id": conversation_id, "user_id": user_id}
+            {"_id": ObjectId(conversation_id), "user_id": user_id}
         )
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -175,7 +176,7 @@ async def delete_ai_conversation(conversation_id: str, user_id: str):
         await ai_messages_collection.delete_many({"conversation_id": conversation_id})
         
         # Delete conversation
-        await ai_conversations_collection.delete_one({"_id": conversation_id})
+        await ai_conversations_collection.delete_one({"_id": ObjectId(conversation_id)})
         
         return {"message": "Conversation deleted successfully"}
     
